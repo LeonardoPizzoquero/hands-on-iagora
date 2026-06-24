@@ -1,22 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { createPostSchema } from "./post";
+import { postSchema, TITLE_MAX } from "./post";
 
-describe("createPostSchema", () => {
+describe("postSchema", () => {
   it("aceita input válido e faz trim", () => {
-    const result = createPostSchema.parse({
+    const result = postSchema.parse({
       title: "  Como fazer deploy?  ",
-      body: "Tenho uma dúvida sobre Vercel.",
+      content: "Tenho uma dúvida sobre **Vercel**.",
     });
     expect(result.title).toBe("Como fazer deploy?");
+    expect(result.content).toBe("Tenho uma dúvida sobre **Vercel**.");
   });
 
-  it("rejeita título curto", () => {
-    const result = createPostSchema.safeParse({ title: "ab", body: "ok" });
+  it("rejeita título vazio", () => {
+    const result = postSchema.safeParse({ title: "   ", content: "ok" });
     expect(result.success).toBe(false);
   });
 
-  it("rejeita body vazio", () => {
-    const result = createPostSchema.safeParse({ title: "título ok", body: "  " });
+  it("rejeita título acima do limite", () => {
+    const result = postSchema.safeParse({
+      title: "a".repeat(TITLE_MAX + 1),
+      content: "ok",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejeita content vazio", () => {
+    const result = postSchema.safeParse({ title: "título ok", content: "  " });
     expect(result.success).toBe(false);
   });
 });

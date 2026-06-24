@@ -37,3 +37,6 @@ pnpm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+.vercel
+tsconfig.tsbuildinfo

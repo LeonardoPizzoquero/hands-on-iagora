@@ -17,6 +17,12 @@ export async function Header() {
 
       {profile ? (
         <div className="flex items-center gap-3">
+          <Link
+            href="/feed"
+            className="brutal-box bg-paper px-3 py-1.5 text-sm font-bold transition-transform hover:-translate-y-0.5"
+          >
+            Feed
+          </Link>
           <span className="brutal-box bg-brand-yellow px-3 py-1.5 text-sm font-bold">
             {profile.name}
             {profile.role === "teacher" ? " · prof" : ""}
