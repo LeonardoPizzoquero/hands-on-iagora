@@ -1,0 +1,8 @@
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@playwright/test@1.61.1'
+  - '@vitejs/plugin-react@6.0.3'
+  - playwright-core@1.61.1
+  - playwright@1.61.1

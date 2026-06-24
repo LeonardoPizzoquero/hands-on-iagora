@@ -1,0 +1,209 @@
+ Prompt 0 — Scaffold / Fundação
+
+     Quero começar do zero um fórum de alunos chamado "IAgora?": alunos publicam
+     dúvidas e projetos que criaram, e professor e outros alunos comentam. É um projeto
+     de aula sobre spec-driven development.
+
+     Stack obrigatória:
+     - Next.js última versão (App Router) + TypeScript + Tailwind CSS
+     - pnpm, ESLint, Vitest (unit/integração), Playwright (E2E)
+     - Supabase (Postgres + Auth) via @supabase/ssr: createServerClient (server),
+       createBrowserClient (client) e middleware com refresh de sessão + proteção de rota
+     - Aplicar o design system de neubrutalism-DESIGN.md
+
+     Regras e padrões que a fundação precisa estabelecer desde já (cubra TODOS):
+     - Estrutura de pastas: app/ (rotas) e lib/ (lógica: supabase/, auth/, etc.)
+     - .env.example com NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY e
+       SUPABASE_SERVICE_ROLE_KEY; deixar explícito que a service role NUNCA vai ao client
+     - Convenção: mutations em Server Actions com validação+sanitização; leituras em
+       Server Components; RLS é a camada final de defesa em TODAS as tabelas
+     - Código, tabelas e identificadores em inglês; UI pode ser em português
+     - Scripts pnpm: dev, build, lint, test, test:e2e
+     - Uma home/landing simples já no estilo neubrutalism
+     - Setup mínimo de Vitest e Playwright rodando
+
+     Antes de propor a spec/plano: liste em tópicos tudo que você vai cobrir nesta
+     fundação e me pergunte qualquer ambiguidade (versões, libs auxiliares, decisões de
+     estrutura). Só depois proponha. Ao final, rode lint + build/test e confirme.
+
+
+
+Prompt 1 — Autenticação + Perfil
+
+     Agora a autenticação com Supabase Auth e os perfis.
+
+     Funcionalidades:
+     - Cadastro com nome completo, email e senha
+     - Login com email e senha
+     - Logout
+     - Tabela profiles ligada 1:1 ao auth.users, com: name, e role ('student' | 'teacher',
+       default 'student'). O perfil é criado automaticamente no cadastro (trigger ou na
+       própria action de signup)
+
+     Header global (nas páginas autenticadas):
+     - Mostra o nome do usuário logado
+     - Menu/área de perfil com a ação de logout
+     - Em telas públicas (login/signup) o header não aparece, ou aparece sem o bloco de perfil
+
+     Regras de acesso e RLS (cubra cada operação):
+     - Rotas protegidas redirecionam para /login se não houver sessão
+     - Usuário logado que abre /login ou /signup é redirecionado para a home
+     - profiles: cada um lê o próprio perfil (e o necessário p/ exibir nome de autores);
+       cada um edita SOMENTE o próprio perfil; ninguém altera o próprio role livremente
+
+     Validações e estados (não deixe implícito):
+     - Email com formato válido; senha com mínimo de caracteres (defina, ex. 8)
+     - Nome obrigatório, com limite de tamanho e sanitizado
+     - Mensagens de erro claras: email já cadastrado, credenciais inválidas, campos vazios
+     - Estados de loading nos formulários
+
+     Padrões: signup/login/logout como Server Actions; validação e sanitização antes de
+     tocar o banco; design neubrutalism nos formulários e no header.
+
+     Antes de propor: liste todas as regras (incl. RLS por operação, validações e estados
+     de erro) que você vai cobrir, e me pergunte o que estiver ambíguo (ex.: mínimo de
+     senha, confirmação de email, como o role 'teacher' é atribuído). Só depois proponha.
+     Ao final rode lint + testes e confirme.
+
+
+Prompt 2 — Posts
+
+     Agora os posts. Só usuários autenticados criam, editam ou apagam.
+
+     Modelo e telas:
+     - Post tem title e content (markdown), author_id, created_at e updated_at
+     - Feed listando posts (mais recentes primeiro), com paginação ou limite definido
+     - Página de detalhe do post
+     - Criar, editar e apagar
+     - Em todo lugar que um post aparece, mostrar o NOME do autor (vindo de profiles) e a data
+
+     Conteúdo rico:
+     - Editor markdown na criação/edição
+     - Renderização segura do markdown na exibição (prevenir XSS — sanitizar)
+     - Upload de imagem para o conteúdo via Supabase Storage, servida por URL assinada;
+       defina limites (tipos permitidos, tamanho máximo)
+
+     Matriz de permissões / RLS (cubra cada operação explicitamente):
+     - Ler: qualquer autenticado
+     - Criar: qualquer autenticado, sempre como autor = usuário atual
+     - Editar: SOMENTE o autor
+     - Apagar: o autor (moderação do professor entra no prompt de moderação)
+
+     Validações e estados:
+     - Título obrigatório com limite (ex. 200) e content obrigatório, ambos sanitizados
+     - Estado vazio do feed ("ainda não há posts")
+     - Erros de upload e de validação com mensagem clara
+     - Confirmação antes de apagar
+
+     Padrões: mutations em Server Actions (validação+sanitização), leituras em Server
+     Components, RLS obrigatório, design neubrutalism.
+
+     Antes de propor: liste as regras que vai cobrir (matriz de permissões, RLS por
+     operação, limites de upload, validações, estados vazio/erro) e pergunte o que estiver
+     ambíguo (paginação? markdown completo ou subset? limites de imagem?). Só depois
+     proponha. Ao final rode lint + testes e confirme.
+
+
+Prompt 3 — Comentários
+
+     Agora os comentários nos posts. Só autenticados comentam.
+
+     Modelo e telas:
+     - Comment tem content (texto simples, SEM markdown), post_id, author_id, created_at, updated_at
+     - Na página de detalhe do post, listar comentários do mais antigo para o mais novo
+     - Cada comentário mostra o NOME do autor (de profiles) e a data
+     - Criar comentário; o autor pode editar e apagar o PRÓPRIO comentário
+     - Mostrar a contagem de comentários no post
+
+     Matriz de permissões / RLS (cada operação):
+     - Ler: qualquer autenticado
+     - Criar: qualquer autenticado, author = usuário atual
+     - Editar: SOMENTE o autor
+     - Apagar: o autor (moderação do professor entra no próximo prompt)
+
+     Validações e estados:
+     - Texto obrigatório, com limite de tamanho, sanitizado (prevenir XSS)
+     - Estado vazio ("seja o primeiro a comentar")
+     - Erro de validação com mensagem clara
+     - Confirmação antes de apagar; estado de loading ao enviar
+
+     Padrões: mutations em Server Actions, RLS obrigatório, design neubrutalism.
+
+     Antes de propor: liste as regras (permissões, RLS por operação, validações, estados
+     vazio/erro, ordenação) e pergunte o que estiver ambíguo (limite de caracteres?
+     respostas aninhadas ou lista plana?). Só depois proponha. Ao final rode lint + testes.
+
+
+Prompt 4 — Moderação (professor)
+
+     Agora a moderação, exercida por quem tem role 'teacher'.
+
+     Poderes do professor:
+     - Apagar QUALQUER post, mesmo não sendo o autor
+     - Apagar QUALQUER comentário, mesmo não sendo o autor
+     - (Defina comigo se há mais: ocultar/fixar post, marcar como resolvido — me pergunte)
+
+     Onde aplicar (cubra as duas camadas):
+     - RLS: políticas de DELETE de posts e comments passam a permitir "autor OU teacher".
+       Reforce que NÃO basta a UI — a regra precisa estar no banco
+     - UI: ações de moderação aparecem para quem é teacher; aluno comum não vê
+     - Destaque visual (neubrutalism) para comentários feitos pelo professor
+
+     Regras e estados:
+     - Confirmação antes de apagar conteúdo de outra pessoa
+     - Como o role 'teacher' é definido (defina comigo: seed manual no banco? coluna
+       setada por admin? — me pergunte antes de assumir)
+     - Garantir que aluno NÃO consegue escalar para teacher por conta própria
+
+     Padrões: tudo protegido por autenticação e RLS (camada final), mutations em Server
+     Actions, design neubrutalism.
+
+     Antes de propor: liste todas as regras de moderação e a matriz de permissões
+     resultante (aluno x autor x professor, por operação), e me pergunte as ambiguidades
+     (escopo dos poderes, atribuição do role). Só depois proponha. Ao final rode lint +
+     testes e confirme.
+
+
+Prompt 5 - Quero busca de posts no fórum IAgora?.
+
+  Funcionalidade:
+  - Campo de busca no feed que filtra posts por título e conteúdo
+  - Usar full-text search do Postgres (coluna tsvector + índice GIN), não LIKE simples
+  - Resultados ordenados por relevância
+  - Manter a busca no query param da URL (ex.: /posts?q=...), pra ser compartilhável
+  - Estado vazio claro ("nenhum post encontrado para X") e preservar o nome do autor e a data nos resultados
+
+  Regras e RLS:
+  - Leitura para qualquer autenticado, RLS mantida (busca não pode vazar nada além do que o feed já mostra)
+  - Input de busca sanitizado
+
+  Padrões: leitura em Server Component, design neubrutalism no campo e nos resultados.
+
+  Antes de propor a spec/plano, liste tudo que você vai cobrir e me pergunte o que
+  estiver ambíguo (buscar em comentários também? destacar o trecho que deu match?
+  acentuação/idioma da config de FTS?). Só depois proponha. Ao final, rode lint +
+  testes e confirme que passam.
+
+
+Prompt 6 - Quero curtidas (upvotes) em posts e comentários no fórum IAgora?.
+
+  Funcionalidade:
+  - Cada usuário pode curtir/descurtir um post ou comentário (toggle)
+  - Apenas 1 curtida por usuário por item (constraint unique no banco)
+  - Mostrar a contagem de curtidas e o estado "curtido por mim" em cada post/comentário
+  - Opção de ordenar o feed por mais curtidos (além do mais recente)
+  - Estado de loading no botão e atualização otimista da contagem
+
+  Modelo e matriz de permissões / RLS (cubra cada operação):
+  - Tabela de likes com user_id, target (post ou comentário) e unique (user_id, target)
+  - Criar curtida: qualquer autenticado, sempre como user = usuário atual
+  - Remover curtida: SOMENTE a própria
+  - Ler contagem: qualquer autenticado
+  - Garantir no banco que ninguém curte em nome de outro
+
+  Padrões: mutations em Server Actions, RLS obrigatório (camada final), design neubrutalism.
+
+  Antes de propor a spec/plano, liste todas as regras (matriz de permissões, RLS por
+  operação, modelo da tabela) e me pergunte o que estiver ambíguo (curtir só posts ou
+  também comentários? pode curtir o próprio conteúdo? ordenação padrão do feed muda?).
+  Só depois proponha. Ao final, rode lint + testes e confirme que passam.
