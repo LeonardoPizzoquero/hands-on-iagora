@@ -9,8 +9,6 @@ import { validateImage } from "@/lib/validation/image";
 
 export type PostFormState = { error?: string };
 
-const SIGNED_URL_TTL = 60 * 60; // 1h
-
 /** Cria post. author_id é sempre o usuário atual (nunca vem do client). */
 export async function createPost(
   _prev: PostFormState,
@@ -93,9 +91,10 @@ export async function deletePost(postId: string): Promise<void> {
 export type UploadState = { url?: string; error?: string };
 
 /**
- * Faz upload de imagem do conteúdo para o bucket privado `post-images` em
- * `{user_id}/{uuid}.ext` e retorna uma signed URL. Valida tipo e tamanho
- * server-side (defesa em camadas — RLS de Storage também restringe a pasta).
+ * Faz upload de imagem do conteúdo para o bucket público `post-images` em
+ * `{user_id}/{uuid}.ext` e retorna uma URL pública permanente. Valida tipo e
+ * tamanho server-side (defesa em camadas — RLS de Storage restringe a escrita
+ * à própria pasta).
  */
 export async function uploadPostImage(
   _prev: UploadState,
@@ -120,11 +119,11 @@ export async function uploadPostImage(
 
   if (upErr) return { error: "Falha no upload. Tente novamente." };
 
-  const { data, error: signErr } = await supabase.storage
-    .from("post-images")
-    .createSignedUrl(path, SIGNED_URL_TTL);
+  // URL pública permanente (bucket é público). Não expira, ao contrário da
+  // signed URL, evitando que imagens gravadas no conteúdo do post quebrem.
+  const { data } = supabase.storage.from("post-images").getPublicUrl(path);
 
-  if (signErr || !data) return { error: "Falha ao gerar URL da imagem." };
+  if (!data?.publicUrl) return { error: "Falha ao gerar URL da imagem." };
 
-  return { url: data.signedUrl };
+  return { url: data.publicUrl };
 }
