@@ -6,7 +6,7 @@ import { validateImage } from "@/lib/validation/image";
 
 /**
  * Botão de upload de imagem. Valida no client (UX) e no server (segurança),
- * sobe via Server Action e devolve a markdown `![alt](signedUrl)` ao pai.
+ * sobe via Server Action e devolve a markdown `![alt](publicUrl)` ao pai.
  */
 export function ImageUploadButton({
   onInsert,
